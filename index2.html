@@ -1,0 +1,126 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=7, IE=9, IE=10">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+    <title>OKI Traffic Counts</title>
+    <link rel="stylesheet" href="http://serverapi.arcgisonline.com/jsapi/arcgis/3.5/js/esri/css/esri.css">
+    <style>
+      html, body, #map {
+        height:100%;
+        width:100%;
+        margin:0;
+        padding:0;
+      }
+      body {
+        background-color:#FFF;
+        overflow:hidden;
+        font-family:"Trebuchet MS";
+      }
+      #search {
+        display: block;
+        position: absolute;
+        z-index: 2;
+        top: 20px;
+        left: 75px;
+      }
+    </style>
+
+    <script src="http://serverapi.arcgisonline.com/jsapi/arcgis/3.5/"></script>
+    <script>
+      dojo.require("esri.map");
+      dojo.require("esri.dijit.Geocoder");
+      dojo.require("esri.layers.FeatureLayer");
+      dojo.require("esri.arcgis.utils");
+      dojo.require("dojox.mobile");
+      dojo.require("dojox.mobile.Button");
+      dojo.requireIf(!dojo.isWebKit, "dojox.mobile.compat");
+      var geocoder;
+      var locatorUrl = "http://maps.oki.org/arcgis/rest/services/Locators/tc_loc/GeocodeServer";
+      function init() {
+        var randoLat = "39."+(Math.floor(Math.random() * (40 - 10 + 1)) + 10);
+        // console.log(randoLat)
+        var randoLong = "-84."+(Math.floor(Math.random() * (60 - 20 + 1)) + 10);
+        // console.log(randoLong)
+        var randoCenter = [randoLong,randoLat];
+        // console.log(randoCenter)
+        // todo add lods
+        var map = new esri.Map("map",{
+          //basemap: "topo",
+          //todo add random number for location mixups
+          // center: [-84.13,39.10], //long, lat
+          center: randoCenter, //long, lat
+          zoom: 14
+        });
+        var featureLayer = new esri.layers.FeatureLayer("http://maps.oki.org/arcgis/rest/services/Layers/TrafficCounts/MapServer/0",{
+        mode: esri.layers.FeatureLayer.MODE_ONDEMAND,
+        //infoTemplate: infoTemplate,
+        outFields: ["*"]
+        });
+        // console.log(map)
+        var baseMapLayer = new esri.layers.ArcGISTiledMapServiceLayer("http://maps.oki.org/arcgis/rest/services/Basemaps/okibasemap_minimal/MapServer");
+        map.addLayer(baseMapLayer);
+        map.addLayer(featureLayer);
+        var myGeocoders = [{
+             url: locatorUrl,
+             name: "TrafficCountsLocator"
+        }];
+        geocoder = new esri.dijit.Geocoder({
+          map: map,
+          autoComplete: true,
+          autoNavigate: true,
+          showResults: true,
+          arcgisGeocoder: false,
+          maxLocations: 10,
+          geocoders: myGeocoders,
+          value: ''
+        },"search");
+        geocoder.startup();
+      }
+      function getLocation() {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(zoomToLocation, locationError);
+        }
+      }
+
+      function locationError(error) {
+        switch (error.code) {
+        case error.PERMISSION_DENIED:
+          alert("Location not provided");
+          break;
+
+        case error.POSITION_UNAVAILABLE:
+          alert("Current location not available");
+          break;
+
+        case error.TIMEOUT:
+          alert("Timeout");
+          break;
+
+        default:
+          alert("unknown error");
+          break;
+        }
+      }
+
+      function zoomToLocation(location) {
+        map.graphics.clear();
+        var pt = esri.geometry.geographicToWebMercator(new esri.geometry.Point(location.coords.longitude, location.coords.latitude));
+
+        // var symbol = new esri.symbol.PictureMarkerSymbol('images/greendot.png', 30, 30);
+        // graphic = new esri.Graphic(pt, symbol);
+        // map.graphics.add(graphic);
+
+        map.centerAt(pt);
+      }
+      dojo.ready(init);
+    </script>
+  </head>
+  <body>
+    <div id="search"></div>
+    <div id="map"></div>
+    <button id="btn1" data-dojo-type="dojox.mobile.Button" data-dojo-props="onClick:function(){getLocation();}" style="position:absolute;right:5px;top:48px;z-index:99;">Get Location</button>
+  </body>
+</html>
